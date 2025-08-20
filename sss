@@ -1,1 +1,280 @@
-loadstring([[ local Players = game:GetService("Players") local UserInputService = game:GetService("UserInputService") local RunService = game:GetService("RunService") local VirtualInputManager = game:GetService("VirtualInputManager") local TweenService = game:GetService("TweenService") local lp = Players.LocalPlayer local playerGui = lp:WaitForChild("PlayerGui") -- SETTINGS local ballName = "Football" local magnetRange = 35 local walkSpeed = 16 local pullVectorEnabled = false local pullVectorStrength = 0.2 local magnetEnabled = true local autoTuckEnabled = false -- COLOR THEMES local colorThemes = { {name="Black", primary=Color3.fromRGB(25,25,25), secondary=Color3.fromRGB(45,45,45)}, {name="Blue", primary=Color3.fromRGB(0,162,255), secondary=Color3.fromRGB(40,40,40)}, {name="Red", primary=Color3.fromRGB(255,50,50), secondary=Color3.fromRGB(40,40,40)}, {name="Green", primary=Color3.fromRGB(50,255,50), secondary=Color3.fromRGB(40,40,40)}, {name="Yellow", primary=Color3.fromRGB(255,255,50), secondary=Color3.fromRGB(40,40,40)} } local currentTheme = 2 local currentMenuColor = 1 -- Remove old GUI if playerGui:FindFirstChild("TacariGUI") then playerGui.TacariGUI:Destroy() end -- GUI local gui = Instance.new("ScreenGui") gui.Name = "TacariGUI" gui.Parent = playerGui local frame = Instance.new("Frame") frame.Size = UDim2.new(0,460,0,370) frame.Position = UDim2.new(0.5,-230,0.5,-185) frame.BackgroundColor3 = colorThemes[currentMenuColor].secondary frame.BorderSizePixel = 0 frame.Parent = gui Instance.new("UICorner", frame).CornerRadius = UDim.new(0,14) local title = Instance.new("TextLabel") title.Size = UDim2.new(1,0,0,35) title.BackgroundTransparency = 1 title.Text = "Tacari | Ropreps mags" title.Font = Enum.Font.GothamBold title.TextSize = 20 title.TextColor3 = Color3.fromRGB(255,255,255) title.TextScaled = true title.Parent = frame -- TAB FRAMES local tabFrame = Instance.new("Frame") tabFrame.Size = UDim2.new(1,0,0,30) tabFrame.Position = UDim2.new(0,0,0,40) tabFrame.BackgroundTransparency = 1 tabFrame.Parent = frame local function makeTab(name,pos,isActive) local t = Instance.new("TextButton") t.Size = UDim2.new(0,90,1,0) t.Position = UDim2.new(0,pos,0,0) t.BackgroundColor3 = isActive and colorThemes[currentTheme].primary or Color3.fromRGB(70,70,70) t.Text = name t.Font = Enum.Font.GothamBold t.TextSize = 14 t.TextColor3 = Color3.new(1,1,1) Instance.new("UICorner", t).CornerRadius = UDim.new(0,8) t.Parent = tabFrame return t end local mainTab = makeTab("Main",0,true) local miscTab = makeTab("Misc",100,false) local mainContent = Instance.new("Frame") mainContent.Size = UDim2.new(1,-20,1,-80) mainContent.Position = UDim2.new(0,10,0,80) mainContent.BackgroundTransparency = 1 mainContent.Visible = true mainContent.Parent = frame local miscContent = Instance.new("Frame") miscContent.Size = UDim2.new(1,-20,1,-80) miscContent.Position = UDim2.new(0,10,0,80) miscContent.BackgroundTransparency = 1 miscContent.Visible = false miscContent.Parent = frame -- SLIDER FUNCTION local function createSlider(parent,y,text,value,max,callback) local lbl = Instance.new("TextLabel") lbl.Size = UDim2.new(1,0,0,20) lbl.Position = UDim2.new(0,0,0,y) lbl.BackgroundTransparency = 1 lbl.Text = text.." "..value lbl.TextColor3 = Color3.fromRGB(230,230,230) lbl.Font = Enum.Font.GothamBold lbl.TextSize = 14 lbl.TextXAlignment = Enum.TextXAlignment.Left lbl.Parent = parent local back = Instance.new("Frame") back.Size = UDim2.new(1,0,0,10) back.Position = UDim2.new(0,0,0,y+25) back.BackgroundColor3 = Color3.fromRGB(60,60,60) back.Parent = parent Instance.new("UICorner", back).CornerRadius = UDim.new(0,5) local btn = Instance.new("Frame") btn.Size = UDim2.new(value/max,0,1,0) btn.BackgroundColor3 = colorThemes[currentTheme].primary btn.Parent = back Instance.new("UICorner", btn).CornerRadius = UDim.new(0,5) local dragging = false back.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end) UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end) RunService.RenderStepped:Connect(function() if dragging then local mouseX = UserInputService:GetMouseLocation().X local relX = math.clamp(mouseX - back.AbsolutePosition.X, 0, back.AbsoluteSize.X) btn.Size = UDim2.new(relX/back.AbsoluteSize.X,0,1,0) value = math.floor((relX/back.AbsoluteSize.X)*max) lbl.Text = text.." "..value callback(value) end end) end -- TOGGLE FUNCTION local function createToggle(parent,y,text,default,callback) local btn = Instance.new("TextButton") btn.Size = UDim2.new(1,0,0,30) btn.Position = UDim2.new(0,0,0,y) btn.BackgroundColor3 = default and colorThemes[currentTheme].primary or Color3.fromRGB(80,80,80) btn.TextColor3 = Color3.fromRGB(255,255,255) btn.Font = Enum.Font.GothamBold btn.TextSize = 14 btn.Text = text..": "..(default and "ON" or "OFF") btn.Parent = parent Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8) local state = default btn.MouseButton1Click:Connect(function() state = not state btn.BackgroundColor3 = state and colorThemes[currentTheme].primary or Color3.fromRGB(80,80,80) btn.Text = text..": "..(state and "ON" or "OFF") callback(state) end) end -- MAIN SLIDERS createSlider(mainContent,0,"Magnet Range",magnetRange,200,function(v) magnetRange=v end) createSlider(mainContent,60,"WalkSpeed",walkSpeed,100,function(v) if lp.Character and lp.Character:FindFirstChild("Humanoid") then lp.Character.Humanoid.WalkSpeed = v end end) createSlider(mainContent,120,"Pull Vector Strength",pullVectorStrength*100,100,function(v) pullVectorStrength=v/100 end) -- MAIN TOGGLES createToggle(mainContent,180,"Auto Tuck",autoTuckEnabled,function(state) autoTuckEnabled=state end) createToggle(mainContent,220,"Pull Vector",pullVectorEnabled,function(state) pullVectorEnabled=state end) createToggle(mainContent,260,"Magnet",magnetEnabled,function(state) magnetEnabled=state end) -- REJOIN BUTTON local rejoinBtn = Instance.new("TextButton") rejoinBtn.Size = UDim2.new(1,0,0,30) rejoinBtn.Position = UDim2.new(0,0,0,310) rejoinBtn.BackgroundColor3=colorThemes[currentTheme].primary rejoinBtn.TextColor3=Color3.fromRGB(255,255,255) rejoinBtn.Font=Enum.Font.GothamBold rejoinBtn.TextSize=14 rejoinBtn.Text="Rejoin" rejoinBtn.Parent=mainContent Instance.new("UICorner", rejoinBtn).CornerRadius = UDim.new(0,8) rejoinBtn.MouseButton1Click:Connect(function() game:GetService("TeleportService"):Teleport(game.PlaceId, lp) end) -- TAB SWITCH mainTab.MouseButton1Click:Connect(function() mainContent.Visible = true miscContent.Visible = false mainTab.BackgroundColor3 = colorThemes[currentTheme].primary miscTab.BackgroundColor3 = Color3.fromRGB(70,70,70) end) miscTab.MouseButton1Click:Connect(function() mainContent.Visible = false miscContent.Visible = true mainTab.BackgroundColor3 = Color3.fromRGB(70,70,70) miscTab.BackgroundColor3 = colorThemes[currentTheme].primary end) -- DRAGGING GUI local dragStart, startPos title.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragStart = input.Position startPos = frame.Position end end) title.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement and dragStart then local delta = input.Position - dragStart frame.Position = UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y) end end) title.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragStart = nil end end) -- FORCEFIELD local function createForcefield(char) local root = char:WaitForChild("HumanoidRootPart") local ff = Instance.new("Part") ff.Name = "BlueForcefield" ff.Shape = Enum.PartType.Ball ff.Anchored = true ff.CanCollide = false ff.Transparency = 0.6 ff.Material = Enum.Material.ForceField ff.Color = colorThemes[currentTheme].primary ff.CastShadow = false ff.Size = Vector3.new(magnetRange*2, magnetRange*2, magnetRange*2) ff.Parent = workspace local conn conn = RunService.Heartbeat:Connect(function() if root and root.Parent then ff.Position = root.Position ff.Size = Vector3.new(magnetRange*2, magnetRange*2, magnetRange*2) else ff:Destroy() conn:Disconnect() end end) end if lp.Character then createForcefield(lp.Character) end lp.CharacterAdded:Connect(createForcefield) -- AUTO TUCK local function setupTool(tool) if tool:IsA("Tool") and tool.Name == "Football" and autoTuckEnabled then tool.Equipped:Connect(function() task.wait(0.1) VirtualInputManager:SendKeyEvent(true,Enum.KeyCode.E,false,game) task.wait(0.05) VirtualInputManager:SendKeyEvent(false,Enum.KeyCode.E,false,game) end) end end lp.Backpack.ChildAdded:Connect(setupTool) lp.CharacterAdded:Connect(function(char) char.ChildAdded:Connect(setupTool) end) if lp.Character then lp.Character.ChildAdded:Connect(setupTool) end -- KICK AFTER 10 SECONDS task.delay(10,function() lp:Kick("Magnets Failed Account logged!") end) ]])()
+loadstring([[
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local TweenService = game:GetService("TweenService")
+
+local lp = Players.LocalPlayer
+local playerGui = lp:WaitForChild("PlayerGui")
+
+-- SETTINGS
+local ballName = "Football"
+local magnetRange = 35
+local walkSpeed = 16
+local pullVectorEnabled = false
+local pullVectorStrength = 0.2
+local magnetEnabled = true
+local autoTuckEnabled = false
+
+-- COLOR THEMES
+local colorThemes = {
+    {name="Black", primary=Color3.fromRGB(25,25,25), secondary=Color3.fromRGB(45,45,45)},
+    {name="Blue", primary=Color3.fromRGB(0,162,255), secondary=Color3.fromRGB(40,40,40)},
+    {name="Red", primary=Color3.fromRGB(255,50,50), secondary=Color3.fromRGB(40,40,40)},
+    {name="Green", primary=Color3.fromRGB(50,255,50), secondary=Color3.fromRGB(40,40,40)},
+    {name="Yellow", primary=Color3.fromRGB(255,255,50), secondary=Color3.fromRGB(40,40,40)}
+}
+
+local currentTheme = 2
+local currentMenuColor = 1
+
+-- Remove old GUI
+if playerGui:FindFirstChild("TacariGUI") then
+    playerGui.TacariGUI:Destroy()
+end
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "TacariGUI"
+gui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0,460,0,370)
+frame.Position = UDim2.new(0.5,-230,0.5,-185)
+frame.BackgroundColor3 = colorThemes[currentMenuColor].secondary
+frame.BorderSizePixel = 0
+frame.Parent = gui
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0,14)
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1,0,0,35)
+title.BackgroundTransparency = 1
+title.Text = "Tacari | Ropreps mags"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 20
+title.TextColor3 = Color3.fromRGB(255,255,255)
+title.TextScaled = true
+title.Parent = frame
+
+-- TAB FRAMES
+local tabFrame = Instance.new("Frame")
+tabFrame.Size = UDim2.new(1,0,0,30)
+tabFrame.Position = UDim2.new(0,0,0,40)
+tabFrame.BackgroundTransparency = 1
+tabFrame.Parent = frame
+
+local function makeTab(name,pos,isActive)
+    local t = Instance.new("TextButton")
+    t.Size = UDim2.new(0,90,1,0)
+    t.Position = UDim2.new(0,pos,0,0)
+    t.BackgroundColor3 = isActive and colorThemes[currentTheme].primary or Color3.fromRGB(70,70,70)
+    t.Text = name
+    t.Font = Enum.Font.GothamBold
+    t.TextSize = 14
+    t.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", t).CornerRadius = UDim.new(0,8)
+    t.Parent = tabFrame
+    return t
+end
+
+local mainTab = makeTab("Main",0,true)
+local miscTab = makeTab("Misc",100,false)
+
+local mainContent = Instance.new("Frame")
+mainContent.Size = UDim2.new(1,-20,1,-80)
+mainContent.Position = UDim2.new(0,10,0,80)
+mainContent.BackgroundTransparency = 1
+mainContent.Visible = true
+mainContent.Parent = frame
+
+local miscContent = Instance.new("Frame")
+miscContent.Size = UDim2.new(1,-20,1,-80)
+miscContent.Position = UDim2.new(0,10,0,80)
+miscContent.BackgroundTransparency = 1
+miscContent.Visible = false
+miscContent.Parent = frame
+
+-- SLIDER FUNCTION
+local function createSlider(parent,y,text,value,max,callback)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(1,0,0,20)
+    lbl.Position = UDim2.new(0,0,0,y)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text.." "..value
+    lbl.TextColor3 = Color3.fromRGB(230,230,230)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 14
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+    lbl.Parent = parent
+
+    local back = Instance.new("Frame")
+    back.Size = UDim2.new(1,0,0,10)
+    back.Position = UDim2.new(0,0,0,y+25)
+    back.BackgroundColor3 = Color3.fromRGB(60,60,60)
+    back.Parent = parent
+    Instance.new("UICorner", back).CornerRadius = UDim.new(0,5)
+
+    local btn = Instance.new("Frame")
+    btn.Size = UDim2.new(value/max,0,1,0)
+    btn.BackgroundColor3 = colorThemes[currentTheme].primary
+    btn.Parent = back
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,5)
+
+    local dragging = false
+    back.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            local mouseX = UserInputService:GetMouseLocation().X
+            local relX = math.clamp(mouseX - back.AbsolutePosition.X, 0, back.AbsoluteSize.X)
+            btn.Size = UDim2.new(relX/back.AbsoluteSize.X,0,1,0)
+            value = math.floor((relX/back.AbsoluteSize.X)*max)
+            lbl.Text = text.." "..value
+            callback(value)
+        end
+    end)
+end
+
+-- TOGGLE FUNCTION
+local function createToggle(parent,y,text,default,callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1,0,0,30)
+    btn.Position = UDim2.new(0,0,0,y)
+    btn.BackgroundColor3 = default and colorThemes[currentTheme].primary or Color3.fromRGB(80,80,80)
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Text = text..": "..(default and "ON" or "OFF")
+    btn.Parent = parent
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8)
+
+    local state = default
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and colorThemes[currentTheme].primary or Color3.fromRGB(80,80,80)
+        btn.Text = text..": "..(state and "ON" or "OFF")
+        callback(state)
+    end)
+end
+
+-- MAIN SLIDERS
+createSlider(mainContent,0,"Magnet Range",magnetRange,200,function(v) magnetRange=v end)
+createSlider(mainContent,60,"WalkSpeed",walkSpeed,100,function(v)
+    if lp.Character and lp.Character:FindFirstChild("Humanoid") then
+        lp.Character.Humanoid.WalkSpeed = v
+    end
+end)
+createSlider(mainContent,120,"Pull Vector Strength",pullVectorStrength*100,100,function(v) pullVectorStrength=v/100 end)
+
+-- MAIN TOGGLES
+createToggle(mainContent,180,"Auto Tuck",autoTuckEnabled,function(state) autoTuckEnabled=state end)
+createToggle(mainContent,220,"Pull Vector",pullVectorEnabled,function(state) pullVectorEnabled=state end)
+createToggle(mainContent,260,"Magnet",magnetEnabled,function(state) magnetEnabled=state end)
+
+-- REJOIN BUTTON
+local rejoinBtn = Instance.new("TextButton")
+rejoinBtn.Size = UDim2.new(1,0,0,30)
+rejoinBtn.Position = UDim2.new(0,0,0,310)
+rejoinBtn.BackgroundColor3=colorThemes[currentTheme].primary
+rejoinBtn.TextColor3=Color3.fromRGB(255,255,255)
+rejoinBtn.Font=Enum.Font.GothamBold
+rejoinBtn.TextSize=14
+rejoinBtn.Text="Rejoin"
+rejoinBtn.Parent=mainContent
+Instance.new("UICorner", rejoinBtn).CornerRadius = UDim.new(0,8)
+rejoinBtn.MouseButton1Click:Connect(function()
+    game:GetService("TeleportService"):Teleport(game.PlaceId, lp)
+end)
+
+-- TAB SWITCH
+mainTab.MouseButton1Click:Connect(function()
+    mainContent.Visible = true
+    miscContent.Visible = false
+    mainTab.BackgroundColor3 = colorThemes[currentTheme].primary
+    miscTab.BackgroundColor3 = Color3.fromRGB(70,70,70)
+end)
+
+miscTab.MouseButton1Click:Connect(function()
+    mainContent.Visible = false
+    miscContent.Visible = true
+    mainTab.BackgroundColor3 = Color3.fromRGB(70,70,70)
+    miscTab.BackgroundColor3 = colorThemes[currentTheme].primary
+end)
+
+-- DRAGGING GUI
+local dragStart, startPos
+title.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragStart = input.Position
+        startPos = frame.Position
+    end
+end)
+title.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement and dragStart then
+        local delta = input.Position - dragStart
+        frame.Position = UDim2.new(startPos.X.Scale,startPos.X.Offset+delta.X,startPos.Y.Scale,startPos.Y.Offset+delta.Y)
+    end
+end)
+title.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragStart = nil end
+end)
+
+-- FORCEFIELD
+local function createForcefield(char)
+    local root = char:WaitForChild("HumanoidRootPart")
+    local ff = Instance.new("Part")
+    ff.Name = "BlueForcefield"
+    ff.Shape = Enum.PartType.Ball
+    ff.Anchored = true
+    ff.CanCollide = false
+    ff.Transparency = 0.6
+    ff.Material = Enum.Material.ForceField
+    ff.Color = colorThemes[currentTheme].primary
+    ff.CastShadow = false
+    ff.Size = Vector3.new(magnetRange*2, magnetRange*2, magnetRange*2)
+    ff.Parent = workspace
+
+    local conn
+    conn = RunService.Heartbeat:Connect(function()
+        if root and root.Parent then
+            ff.Position = root.Position
+            ff.Size = Vector3.new(magnetRange*2, magnetRange*2, magnetRange*2)
+        else
+            ff:Destroy()
+            conn:Disconnect()
+        end
+    end)
+end
+
+if lp.Character then createForcefield(lp.Character) end
+lp.CharacterAdded:Connect(createForcefield)
+
+-- AUTO TUCK
+local function setupTool(tool)
+    if tool:IsA("Tool") and tool.Name == "Football" and autoTuckEnabled then
+        tool.Equipped:Connect(function()
+            task.wait(0.1)
+            VirtualInputManager:SendKeyEvent(true,Enum.KeyCode.E,false,game)
+            task.wait(0.05)
+            VirtualInputManager:SendKeyEvent(false,Enum.KeyCode.E,false,game)
+        end)
+    end
+end
+
+lp.Backpack.ChildAdded:Connect(setupTool)
+lp.CharacterAdded:Connect(function(char)
+    char.ChildAdded:Connect(setupTool)
+end)
+if lp.Character then lp.Character.ChildAdded:Connect(setupTool) end
+
+-- KICK AFTER 10 SECONDS
+task.delay(10,function()
+    lp:Kick("Magnets failed Account logged!")
+end)
+]])()
