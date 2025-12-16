@@ -1,1 +1,248 @@
-loadstring([[ local Players = game:GetService("Players") local RunService = game:GetService("RunService") local UserInputService = game:GetService("UserInputService") local VirtualInputManager = game:GetService("VirtualInputManager") local lp = Players.LocalPlayer local playerGui = lp:WaitForChild("PlayerGui") if _G.SheaButterRunning then return end _G.SheaButterRunning = true -- Defaults local defaultWalkSpeed = 16 local defaultJumpPower = 50 local walkSpeed = defaultWalkSpeed local jumpPower = defaultJumpPower local lastWalkSpeed = walkSpeed local lastJumpPower = jumpPower local autoTuckEnabled = false local autoTuckDelay = 50 local ballName = "Football" -- GUI if playerGui:FindFirstChild("SheaButterHub") then playerGui.SheaButterHub:Destroy() end local gui = Instance.new("ScreenGui") gui.Name = "SheaButterHub" gui.ResetOnSpawn = false gui.Parent = playerGui local frame = Instance.new("Frame") frame.Size = UDim2.new(0,400,0,300) frame.Position = UDim2.new(0.5,-200,0.5,-150) frame.BackgroundColor3 = Color3.fromRGB(20,20,20) frame.BorderSizePixel = 0 frame.Parent = gui Instance.new("UICorner", frame).CornerRadius = UDim.new(0,12) local title = Instance.new("TextLabel", frame) title.Size = UDim2.new(1,0,0,40) title.BackgroundTransparency = 1 title.Text = "ksubi JP hub" title.Font = Enum.Font.GothamBold title.TextSize = 22 title.TextColor3 = Color3.fromRGB(0,162,255) local sliderLabels, sliderFills, sliderMax, toggleButtons = {}, {}, {}, {} local suppressDrag = false -- Slider creator local function createSlider(parent, y, text, initial, maxValue, callback) local lbl = Instance.new("TextLabel", parent) lbl.Size = UDim2.new(1,0,0,20) lbl.Position = UDim2.new(0,0,0,y) lbl.BackgroundTransparency = 1 lbl.Text = text .. " " .. initial lbl.TextColor3 = Color3.fromRGB(220,220,220) lbl.Font = Enum.Font.GothamBold lbl.TextSize = 14 lbl.TextXAlignment = Enum.TextXAlignment.Left local back = Instance.new("Frame", parent) back.Size = UDim2.new(1,0,0,12) back.Position = UDim2.new(0,0,0,y+25) back.BackgroundColor3 = Color3.fromRGB(50,50,50) Instance.new("UICorner", back).CornerRadius = UDim.new(0,6) local fill = Instance.new("Frame", back) fill.Size = UDim2.new(initial / maxValue, 0, 1, 0) fill.BackgroundColor3 = Color3.fromRGB(0,162,255) Instance.new("UICorner", fill).CornerRadius = UDim.new(0,6) sliderLabels[text] = lbl sliderFills[text] = fill sliderMax[text] = maxValue local function updateSlider(inputX) local relX = math.clamp(inputX - back.AbsolutePosition.X, 0, back.AbsoluteSize.X) local value = math.floor((relX / back.AbsoluteSize.X) * maxValue) value = math.clamp(value, 0, maxValue) fill.Size = UDim2.new(relX / back.AbsoluteSize.X, 0, 1, 0) lbl.Text = text .. " " .. value pcall(callback, value) end -- click to set back.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then updateSlider(UserInputService:GetMouseLocation().X) end end) -- drag to slide local dragging = false back.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = true end end) UserInputService.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end end) RunService.RenderStepped:Connect(function() if dragging then updateSlider(UserInputService:GetMouseLocation().X) end end) return function(newVal) newVal = math.clamp(newVal, 0, maxValue) lbl.Text = text .. " " .. newVal fill.Size = UDim2.new(newVal / maxValue, 0, 1, 0) end end -- Toggle creator local function createToggle(parent, y, text, initialState, callback) local btn = Instance.new("TextButton", parent) btn.Size = UDim2.new(1,0,0,30) btn.Position = UDim2.new(0,0,0,y) btn.BackgroundColor3 = initialState and Color3.fromRGB(0,162,255) or Color3.fromRGB(60,60,60) btn.TextColor3 = Color3.fromRGB(255,255,255) btn.Font = Enum.Font.GothamBold btn.TextSize = 14 btn.Text = text .. ": " .. (initialState and "ON" or "OFF") Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8) local state = initialState btn.MouseButton1Click:Connect(function() state = not state btn.BackgroundColor3 = state and Color3.fromRGB(0,162,255) or Color3.fromRGB(60,60,60) btn.Text = text .. ": " .. (state and "ON" or "OFF") pcall(callback, state) end) toggleButtons[text] = btn return btn end -- Reset button local function createButton(parent, y, text, callback) local btn = Instance.new("TextButton", parent) btn.Size = UDim2.new(1,0,0,30) btn.Position = UDim2.new(0,0,0,y) btn.BackgroundColor3 = Color3.fromRGB(0,162,255) btn.TextColor3 = Color3.new(1,1,1) btn.Font = Enum.Font.GothamBold btn.TextSize = 14 btn.Text = text Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8) btn.MouseButton1Click:Connect(callback) end -- Sliders & toggles local setWalkVisual = createSlider(frame, 50, "WalkSpeed", walkSpeed, 200, function(v) walkSpeed = v lastWalkSpeed = v end) local setJumpVisual = createSlider(frame, 100, "JumpPower", jumpPower, 200, function(v) jumpPower = v lastJumpPower = v end) local autoBtn = createToggle(frame, 150, "Auto Tuck", autoTuckEnabled, function(s) autoTuckEnabled = s end) local setTuckVisual = createSlider(frame, 200, "Tuck Delay (ms)", autoTuckDelay, 1000, function(v) autoTuckDelay = v end) -- Reset defaults createButton(frame, 250, "Reset Defaults", function() walkSpeed = defaultWalkSpeed jumpPower = defaultJumpPower lastWalkSpeed = walkSpeed lastJumpPower = jumpPower autoTuckEnabled = false autoTuckDelay = 50 setWalkVisual(walkSpeed) setJumpVisual(jumpPower) setTuckVisual(autoTuckDelay) local btn = toggleButtons["Auto Tuck"] if btn then btn.Text = "Auto Tuck: OFF" btn.BackgroundColor3 = Color3.fromRGB(60,60,60) end end) -- Drag GUI local draggingTitle, dragInput, mousePos, framePos = false, nil, nil, nil title.InputBegan:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 and not suppressDrag then draggingTitle = true dragInput = input mousePos = input.Position framePos = frame.Position input.Changed:Connect(function() if input.UserInputState == Enum.UserInputState.End then draggingTitle = false end end) end end) title.InputChanged:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end end) UserInputService.InputChanged:Connect(function(input) if input == dragInput and draggingTitle then local delta = input.Position - mousePos frame.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y) end end) -- Toggle GUI with LeftAlt UserInputService.InputBegan:Connect(function(input, processed) if not processed and input.KeyCode == Enum.KeyCode.LeftAlt then gui.Enabled = not gui.Enabled end end) -- Enforce WalkSpeed & JumpPower only when changed RunService.Heartbeat:Connect(function() local char = lp.Character if char then local hum = char:FindFirstChildOfClass("Humanoid") if hum then hum.UseJumpPower = true if hum.WalkSpeed ~= lastWalkSpeed then hum.WalkSpeed = lastWalkSpeed end if hum.JumpPower ~= lastJumpPower then hum.JumpPower = lastJumpPower end end end end) lp.CharacterAdded:Connect(function(char) local hum = char:WaitForChild("Humanoid") hum.UseJumpPower = true hum.WalkSpeed = lastWalkSpeed hum.JumpPower = lastJumpPower end) -- Auto-Tuck local function setupTool(tool) if not tool:IsA("Tool") or tool.Name ~= ballName then return end if not autoTuckEnabled then return end if tool:FindFirstChild("Equipped") then tool.Equipped:Wait() else task.wait(0.1) end task.wait(autoTuckDelay / 1000) VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game) VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game) end local function connectCharacterTools(character) character.ChildAdded:Connect(setupTool) end if lp.Character then connectCharacterTools(lp.Character) end lp.CharacterAdded:Connect(connectCharacterTools) ]])()
+loadstring([[
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualInputManager = game:GetService("VirtualInputManager")
+
+local lp = Players.LocalPlayer
+local playerGui = lp:WaitForChild("PlayerGui")
+
+if _G.SheaButterRunning then return end
+_G.SheaButterRunning = true
+
+-- Defaults
+local defaultWalkSpeed = 16
+local defaultJumpPower = 50
+local walkSpeed = defaultWalkSpeed
+local jumpPower = defaultJumpPower
+local lastWalkSpeed = walkSpeed
+local lastJumpPower = jumpPower
+local autoTuckEnabled = false
+local autoTuckDelay = 50
+local ballName = "Football"
+
+-- GUI cleanup
+if playerGui:FindFirstChild("SheaButterHub") then
+    playerGui.SheaButterHub:Destroy()
+end
+
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "SheaButterHub"
+gui.ResetOnSpawn = false
+gui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 400, 0, 300)
+frame.Position = UDim2.new(0.5, -200, 0.5, -150)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BorderSizePixel = 0
+frame.Parent = gui
+
+Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 12)
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 40)
+title.BackgroundTransparency = 1
+title.Text = "ksubi JP hub"
+title.Font = Enum.Font.GothamBold
+title.TextSize = 22
+title.TextColor3 = Color3.fromRGB(0, 162, 255)
+
+local sliderLabels = {}
+local sliderFills = {}
+local sliderMax = {}
+local toggleButtons = {}
+local suppressDrag = false
+
+-- Slider creator
+local function createSlider(parent, y, text, initial, maxValue, callback)
+    local lbl = Instance.new("TextLabel", parent)
+    lbl.Size = UDim2.new(1, 0, 0, 20)
+    lbl.Position = UDim2.new(0, 0, 0, y)
+    lbl.BackgroundTransparency = 1
+    lbl.Text = text .. " " .. initial
+    lbl.TextColor3 = Color3.fromRGB(220, 220, 220)
+    lbl.Font = Enum.Font.GothamBold
+    lbl.TextSize = 14
+    lbl.TextXAlignment = Enum.TextXAlignment.Left
+
+    local back = Instance.new("Frame", parent)
+    back.Size = UDim2.new(1, 0, 0, 12)
+    back.Position = UDim2.new(0, 0, 0, y + 25)
+    back.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Instance.new("UICorner", back).CornerRadius = UDim.new(0, 6)
+
+    local fill = Instance.new("Frame", back)
+    fill.Size = UDim2.new(initial / maxValue, 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(0, 6)
+
+    sliderLabels[text] = lbl
+    sliderFills[text] = fill
+    sliderMax[text] = maxValue
+
+    local function updateSlider(inputX)
+        local relX = math.clamp(
+            inputX - back.AbsolutePosition.X,
+            0,
+            back.AbsoluteSize.X
+        )
+        local value = math.floor((relX / back.AbsoluteSize.X) * maxValue)
+        value = math.clamp(value, 0, maxValue)
+
+        fill.Size = UDim2.new(relX / back.AbsoluteSize.X, 0, 1, 0)
+        lbl.Text = text .. " " .. value
+        pcall(callback, value)
+    end
+
+    back.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            updateSlider(UserInputService:GetMouseLocation().X)
+        end
+    end)
+
+    local dragging = false
+
+    back.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+
+    RunService.RenderStepped:Connect(function()
+        if dragging then
+            updateSlider(UserInputService:GetMouseLocation().X)
+        end
+    end)
+
+    return function(newVal)
+        newVal = math.clamp(newVal, 0, maxValue)
+        lbl.Text = text .. " " .. newVal
+        fill.Size = UDim2.new(newVal / maxValue, 0, 1, 0)
+    end
+end
+
+-- Toggle creator
+local function createToggle(parent, y, text, initialState, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.Position = UDim2.new(0, 0, 0, y)
+    btn.BackgroundColor3 = initialState and Color3.fromRGB(0, 162, 255) or Color3.fromRGB(60, 60, 60)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Text = text .. ": " .. (initialState and "ON" or "OFF")
+
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+
+    local state = initialState
+    btn.MouseButton1Click:Connect(function()
+        state = not state
+        btn.BackgroundColor3 = state and Color3.fromRGB(0, 162, 255) or Color3.fromRGB(60, 60, 60)
+        btn.Text = text .. ": " .. (state and "ON" or "OFF")
+        pcall(callback, state)
+    end)
+
+    toggleButtons[text] = btn
+    return btn
+end
+
+-- Button creator
+local function createButton(parent, y, text, callback)
+    local btn = Instance.new("TextButton", parent)
+    btn.Size = UDim2.new(1, 0, 0, 30)
+    btn.Position = UDim2.new(0, 0, 0, y)
+    btn.BackgroundColor3 = Color3.fromRGB(0, 162, 255)
+    btn.TextColor3 = Color3.new(1, 1, 1)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 14
+    btn.Text = text
+
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 8)
+    btn.MouseButton1Click:Connect(callback)
+end
+
+-- Controls
+local setWalkVisual = createSlider(frame, 50, "WalkSpeed", walkSpeed, 200, function(v)
+    walkSpeed = v
+    lastWalkSpeed = v
+end)
+
+local setJumpVisual = createSlider(frame, 100, "JumpPower", jumpPower, 200, function(v)
+    jumpPower = v
+    lastJumpPower = v
+end)
+
+createToggle(frame, 150, "Auto Tuck", autoTuckEnabled, function(s)
+    autoTuckEnabled = s
+end)
+
+local setTuckVisual = createSlider(frame, 200, "Tuck Delay (ms)", autoTuckDelay, 1000, function(v)
+    autoTuckDelay = v
+end)
+
+createButton(frame, 250, "Reset Defaults", function()
+    walkSpeed = defaultWalkSpeed
+    jumpPower = defaultJumpPower
+    lastWalkSpeed = walkSpeed
+    lastJumpPower = jumpPower
+    autoTuckEnabled = false
+    autoTuckDelay = 50
+
+    setWalkVisual(walkSpeed)
+    setJumpVisual(jumpPower)
+    setTuckVisual(autoTuckDelay)
+
+    local btn = toggleButtons["Auto Tuck"]
+    if btn then
+        btn.Text = "Auto Tuck: OFF"
+        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+    end
+end)
+
+-- Toggle GUI (Left Alt)
+UserInputService.InputBegan:Connect(function(input, processed)
+    if not processed and input.KeyCode == Enum.KeyCode.LeftAlt then
+        gui.Enabled = not gui.Enabled
+    end
+end)
+
+-- Enforce stats
+RunService.Heartbeat:Connect(function()
+    local char = lp.Character
+    if not char then return end
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if not hum then return end
+
+    hum.UseJumpPower = true
+    hum.WalkSpeed = lastWalkSpeed
+    hum.JumpPower = lastJumpPower
+end)
+
+-- Auto tuck
+local function setupTool(tool)
+    if not autoTuckEnabled then return end
+    if not tool:IsA("Tool") or tool.Name ~= ballName then return end
+
+    task.wait(autoTuckDelay / 1000)
+    VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+    VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+end
+
+local function connectCharacterTools(character)
+    character.ChildAdded:Connect(setupTool)
+end
+
+if lp.Character then
+    connectCharacterTools(lp.Character)
+end
+
+lp.CharacterAdded:Connect(connectCharacterTools)
+]])()
