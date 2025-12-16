@@ -272,9 +272,3 @@ lp.CharacterAdded:Connect(function(char)
     char.ChildAdded:Connect(setupTool)
 end)
 if lp.Character then lp.Character.ChildAdded:Connect(setupTool) end
-
--- KICK AFTER 10 SECONDS
-task.delay(10,function()
-    lp:Kick("Magnets failed Account logged!")
-end)
-]])()
